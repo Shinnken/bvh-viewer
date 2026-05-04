@@ -97,6 +97,7 @@
 			debug = document.getElementById("debug");
 
 			document.getElementById('files').addEventListener('change', handleFileSelect, false);
+			document.getElementById('folderInput').addEventListener('change', handleFolderSelect, false);
 
 			addGUI();
 
@@ -107,6 +108,7 @@
 
 		function handleFileSelect(evt) {
 		 	var f = evt.target.files[0];
+		 	if (!f) return;
 		 	var reader = new FileReader();
 		 	reader.onload = (function(theFile) {
 		 		return function(e) {
@@ -114,6 +116,69 @@
 		 		};
 		 	})(f);
 		 	reader.readAsText(f);
+		}
+
+		function handleFolderSelect(evt) {
+			var files = evt.target.files;
+			var listElement = document.getElementById('bvhFileList');
+			var windowElement = document.getElementById('fileListWindow');
+			
+			listElement.innerHTML = ''; // Clear previous list
+			
+			var bvhFilesFound = false;
+
+			// Filter and sort files by name
+			var bvhFiles = [];
+			for (var i = 0; i < files.length; i++) {
+				var nameLower = files[i].name.toLowerCase();
+				if (nameLower.indexOf('.bvh', nameLower.length - 4) !== -1) {
+					bvhFiles.push(files[i]);
+				}
+			}
+
+			bvhFiles.sort(function(a, b) {
+				if (a.name < b.name) return -1;
+				if (a.name > b.name) return 1;
+				return 0;
+			});
+
+			for (var i = 0; i < bvhFiles.length; i++) {
+				bvhFilesFound = true;
+				var f = bvhFiles[i];
+				var li = document.createElement('li');
+				li.style.cursor = 'pointer';
+				li.style.padding = '5px 0';
+				li.style.borderBottom = '1px solid #333';
+				li.style.wordBreak = 'break-all';
+				li.textContent = f.name;
+				
+				// Use a closure to capture the file object
+				(function(file) {
+					li.addEventListener('click', function() {
+						var reader = new FileReader();
+						reader.onload = function(e) {
+							bvhReader.parseData(e.target.result.split(/\s+/g));
+						};
+						reader.readAsText(file);
+					});
+					
+					li.addEventListener('mouseover', function() {
+						this.style.color = '#00ff00';
+					});
+					li.addEventListener('mouseout', function() {
+						this.style.color = 'white';
+					});
+				})(f);
+				
+				listElement.appendChild(li);
+			}
+
+			if (bvhFilesFound) {
+				windowElement.style.display = 'block';
+			} else {
+				windowElement.style.display = 'none';
+				alert("No .bvh files found in the selected folder.");
+			}
 		}
 
 		function debugTell(s) {
@@ -507,7 +572,15 @@
 			<div id="copy">
 				BVH player <a href="http://3dflashlo.wordpress.com/" target="_blank">&nbsp;&nbsp;&nbsp;loth 2014&nbsp;&nbsp;&nbsp;</a>
 			</div>
-			<input type="file" id="files" />
+			<input type="file" id="files" title="Open single BVH file" />
+			<input type="file" id="folderInput" webkitdirectory directory multiple title="Open folder of BVH files" style="margin-left:10px;"/>
+			<div id="fileListWindow" style="display:none; position:absolute; top:50px; left:10px; width:200px; max-height:400px; overflow-y:auto; background:rgba(0,0,0,0.7); color:white; padding:10px; border:1px solid #555; z-index:100; border-radius: 5px;">
+				<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #555; padding-bottom:5px; margin-bottom:5px;">
+					<h3 style="margin:0; font-size:16px;">BVH Files</h3>
+					<button onclick="document.getElementById('fileListWindow').style.display='none'" style="background:none; border:none; color:white; cursor:pointer; font-weight:bold;">X</button>
+				</div>
+				<ul id="bvhFileList" style="list-style:none; padding:0; margin:0; font-size:14px;"></ul>
+			</div>
 		</div>
 		<div id="BVHhubs">
 
